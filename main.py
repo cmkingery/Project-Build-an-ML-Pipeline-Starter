@@ -66,16 +66,32 @@ def go(config: DictConfig):
             )
 
         if "data_check" in active_steps:
-            ##################
-            # Implement here #
-            ##################
-            pass
+            file_path = os.path.join(hydra.utils.get_original_cwd(), "src", "data_check")
+    
+            _ = mlflow.run(
+                uri=file_path,
+                entry_point="main",
+                parameters={
+                    "csv": "cmkingery-western-governors-university/nyc_airbnb/clean_sample.csv:latest",
+                    "ref": "cmkingery-western-governors-university/nyc_airbnb/clean_sample.csv:reference",
+                    "kl_threshold": config["data_check"]["kl_threshold"],
+                    "min_price": config["etl"]["min_price"],
+                    "max_price": config["etl"]["max_price"]
+                },
+            )
 
         if "data_split" in active_steps:
-            ##################
-            # Implement here #
-            ##################
-            pass
+
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/train_val_test_split",
+                "main",
+                parameters={
+                    "input": "cmkingery-western-governors-university/nyc_airbnb/clean_sample.csv:latest",
+                    "test_size": config["modeling"]["test_size"],
+                    "random_seed": config["modeling"]["random_seed"],
+                    "stratify_by": config["modeling"]["stratify_by"]
+                },
+            )
 
         if "train_random_forest" in active_steps:
 
@@ -87,19 +103,32 @@ def go(config: DictConfig):
             # NOTE: use the rf_config we just created as the rf_config parameter for the train_random_forest
             # step
 
-            ##################
-            # Implement here #
-            ##################
-
-            pass
+            file_path = os.path.join(hydra.utils.get_original_cwd(), "src", "train_random_forest")
+    
+            _ = mlflow.run(
+                uri=file_path,
+                entry_point="main",
+                parameters={
+                    "trainval_artifact": "cmkingery-western-governors-university/nyc_airbnb/trainval_data.csv:latest",
+                    "val_size": config["modeling"]["val_size"],
+                    "random_seed": config["modeling"]["random_seed"],
+                    "stratify_by": config["modeling"]["stratify_by"],
+                    "rf_config": rf_config,
+                    "max_tfidf_features": config["modeling"]["max_tfidf_features"],
+                    "output_artifact": "random_forest_export"
+                },
+            )
 
         if "test_regression_model" in active_steps:
 
-            ##################
-            # Implement here #
-            ##################
-
-            pass
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/test_regression_model",
+                "main",
+                parameters={
+                    "mlflow_model": "cmkingery-western-governors-university/nyc_airbnb/random_forest_export:prod",
+                    "test_dataset": "cmkingery-western-governors-university/nyc_airbnb/test_data.csv:latest"
+                },
+            )
 
 
 if __name__ == "__main__":
